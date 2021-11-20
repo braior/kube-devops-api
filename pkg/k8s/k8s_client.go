@@ -19,7 +19,7 @@ var (
 	datacenters = beego.AppConfig.Strings("k8s::datacenter")
 
 	// DemonDynamicClient set the varaiable of datacenter demon
-	DynamicClients = make(map[string]*dynamic.Interface)
+	DynamicClients = make(map[string]dynamic.Interface)
 )
 
 func init() {
@@ -28,7 +28,7 @@ func init() {
 		beego.BeeLogger.Warn("no datacenter was found")
 	} else {
 		for _, datacenter := range datacenters {
-			kubeconfigLocation := datacenter + kubeConfigFileNameSuffix
+			kubeconfigLocation := kubeConfigPath + datacenter + kubeConfigFileNameSuffix
 			dynamicClient, err := NewK8sClient(kubeconfigLocation)
 			if err != nil {
 				beego.BeeLogger.Warn("cloud not get the %s config", datacenter)
@@ -43,7 +43,7 @@ func init() {
 }
 
 // NewK8sClient  return k8s client according to datacenter
-func NewK8sClient(kubeconfigLocation string) (*dynamic.Interface, error) {
+func NewK8sClient(kubeconfigLocation string) (dynamic.Interface, error) {
 
 	// The kubeconfig configuration file is loaded natively,
 	// so the first parameter(masterURL) is an empty string
@@ -57,5 +57,5 @@ func NewK8sClient(kubeconfigLocation string) (*dynamic.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &dynamicClient, nil
+	return dynamicClient, nil
 }
