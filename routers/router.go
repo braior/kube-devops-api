@@ -15,10 +15,9 @@ import (
 
 func init() {
 	ns := beego.NewNamespace("/v1",
-		beego.NSNamespace("/get",
-			beego.NSRouter("/deployment", &controllers.DeploymentController{}, "get:Get"),
-			beego.NSRouter("/pod", &controllers.PodController{}),
-		),
+		beego.NSRouter("/list", &controllers.ResourceController{}, "get:List"),
+		beego.NSRouter("/get", &controllers.ResourceController{}, "get:Get"),
+		beego.NSRouter("/create", &controllers.ResourceController{}, "post:Create"),
 	)
 	beego.AddNamespace(ns)
 }
