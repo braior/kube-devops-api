@@ -5,9 +5,9 @@ go 1.17
 require (
 	github.com/astaxie/beego v1.12.3
 	github.com/smartystreets/goconvey v1.7.2
-	k8s.io/api v0.22.3
-	k8s.io/apimachinery v0.22.3
-	k8s.io/client-go v0.22.3
+	k8s.io/api v0.22.4
+	k8s.io/apimachinery v0.22.4
+	k8s.io/client-go v0.22.4
 )
 
 require (
@@ -19,6 +19,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
+	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
@@ -45,6 +46,7 @@ require (
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
