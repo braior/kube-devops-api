@@ -32,80 +32,75 @@ var (
 )
 
 func (r *ResourceController) List() {
-	resourceType := r.GetString("resourceType")
+	resourceKind := r.GetString("resourceKind")
 	datacenter := r.GetString("datacenter")
 	namespace := r.GetString("namespace", "default")
 	label := r.GetString("label", "")
 
-	resourceList, err := list(r.Ctx.Request.Context(), resourceType, datacenter, namespace, label)
+	resourceList, err := list(r.Ctx.Request.Context(), resourceKind, datacenter, namespace, label)
 
 	if err != nil {
-		r.Json(r.EntryType(resourceType), "failure", err.Error(), nil)
+		r.Json(r.EntryType(resourceKind), "failure", err.Error(), nil)
 		return
 	}
 
-	r.Json(r.EntryType(resourceType), "success", "", resourceList)
+	r.Json(r.EntryType(resourceKind), "success", "", resourceList)
 }
 
 func (r *ResourceController) Create() {
-	resourceType := r.GetString("resourceType")
+	resourceKind := r.GetString("resourceKind")
 	datacenter := r.GetString("datacenter")
 	namespace := r.GetString("namespace")
 
 	requestData := r.Ctx.Input.RequestBody
 
-	info, err := create(r.Ctx.Request.Context(), resourceType, datacenter, namespace, requestData)
+	info, err := create(r.Ctx.Request.Context(), resourceKind, datacenter, namespace, requestData)
 	if err != nil {
-		r.Json(r.EntryType(resourceType), "failure", err.Error(), nil)
+		r.Json(r.EntryType(resourceKind), "failure", err.Error(), nil)
 		return
 	}
 
-	r.Json(r.EntryType(resourceType), "success", info, nil)
+	r.Json(r.EntryType(resourceKind), "success", info, nil)
 }
 
 func (r *ResourceController) Get() {
 
-	resourceType := r.GetString("resourceType")
+	resourceKind := r.GetString("resourceKind")
 	datacenter := r.GetString("datacenter")
 	namespace := r.GetString("namespace", "default")
 	name := r.GetString("name")
 
-	resource, err := get(r.Ctx.Request.Context(), resourceType, datacenter, namespace, name)
+	resource, err := get(r.Ctx.Request.Context(), resourceKind, datacenter, namespace, name)
 
 	if err != nil {
-		r.Json(r.EntryType(resourceType), "failure", err.Error(), nil)
+		r.Json(r.EntryType(resourceKind), "failure", err.Error(), nil)
 		return
 	}
 
-	r.Json(r.EntryType(resourceType), "success", "", resource)
+	r.Json(r.EntryType(resourceKind), "success", "", resource)
 }
 
-// func (r *ResourceController) Delete() {
-// 	resourceType := r.GetString("resourceType")
-// 	datacenter := r.GetString("datacenter")
-// 	namespace := r.GetString("namespace", "default")
-// 	name := r.GetString("name")
+// list is show the resource deploy detail
+func list(ctx context.Context, resourceKind, datacenter, namespace, label string) (*appsv1.DeploymentList, error) {
 
-// }
+	drc, gvk, gvr, err := getGVR(resourceKind, datacenter)
+	if err != nil {
+		return nil, err
+	}
 
-func list(ctx context.Context, resourceType, datacenter, namespace, label string) (*appsv1.DeploymentList, error) {
+	unstructObj, err := drc.DynamicRESTClient.
+		Resource(*gvr).
+		Namespace(namespace).
+		List(ctx, metav1.ListOptions{LabelSelector: label, Limit: 100})
+	if err != nil {
+		beego.Error(err)
+		return nil, err
+	}
 
-	// check whether the datacenter is in the DynamicRESTClients
-	rc, ok := pkg.RESTClienter.DynamicRESTClients[datacenter]
-	if ok {
-		gvr := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: resourceType}
-
-		unstructObj, err := rc.DynamicRESTClient.
-			Resource(gvr).
-			Namespace(namespace).
-			List(ctx, metav1.ListOptions{LabelSelector: label, Limit: 100})
-		if err != nil {
-			beego.Error(err)
-			return nil, err
-		}
-
-		// Instantiate a deployment list data structure to receive the
-		// results converted from unstructurobj
+	// Instantiate a deployment list data structure to receive the
+	// results converted from unstructurobj
+	switch gvk.Kind {
+	case "deployment":
 		deploymentList := &appsv1.DeploymentList{}
 
 		// convert
@@ -118,27 +113,32 @@ func list(ctx context.Context, resourceType, datacenter, namespace, label string
 			return nil, err
 		}
 		return deploymentList, nil
+	case "pod":
+	default:
 	}
-	return nil, ErrNotFoundDatacenter(datacenter)
+	return nil, err
 }
 
-func get(ctx context.Context, resourceType, datacenter, namespace, name string) (*appsv1.Deployment, error) {
+func get(ctx context.Context, resourceKind, datacenter, namespace, name string) (*appsv1.Deployment, error) {
 
-	// check whether the datacenter is in the DynamicRESTClients
-	rc, ok := pkg.RESTClienter.DynamicRESTClients[datacenter]
-	if ok {
-		gvr := schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: resourceType}
-		unstructObj, err := rc.DynamicRESTClient.
-			Resource(gvr).
-			Namespace(namespace).
-			Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			beego.Error(err)
-			return nil, err
-		}
+	drc, gvk, gvr, err := getGVR(resourceKind, datacenter)
+	if err != nil {
+		return nil, err
+	}
 
-		// Instantiate a deployment list data structure to receive the
-		// results converted from unstructurobj
+	unstructObj, err := drc.DynamicRESTClient.
+		Resource(*gvr).
+		Namespace(namespace).
+		Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		beego.Error(err)
+		return nil, err
+	}
+
+	// Instantiate a deployment list data structure to receive the
+	// results converted from unstructurobj
+	switch gvk.Kind {
+	case "deployment":
 		deployment := &appsv1.Deployment{}
 
 		// convert
@@ -151,20 +151,22 @@ func get(ctx context.Context, resourceType, datacenter, namespace, name string) 
 			return nil, err
 		}
 		return deployment, nil
+	case "pod":
+	default:
 	}
-	return nil, ErrNotFoundDatacenter(datacenter)
+	return nil, err
 }
 
-func create(ctx context.Context, resourceType, datacenter, namespace string, resource []byte) (string, error) {
+func create(ctx context.Context, resourceKind, datacenter, namespace string, resource []byte) (string, error) {
 
 	// check whether the datacenter is in the DynamicRESTClients
-	rc, ok := pkg.RESTClienter.DynamicRESTClients[datacenter]
+	drc, ok := pkg.RESTClienter.DynamicRESTClients[datacenter]
 	if !ok {
 		return "", ErrNotFoundDatacenter(datacenter)
 	}
 
 	// 1. Prepare a RESTMapper to find GVR
-	dc, err := discovery.NewDiscoveryClientForConfig(rc.KubeRESTConfig)
+	dc, err := discovery.NewDiscoveryClientForConfig(drc.KubeRESTConfig)
 	if err != nil {
 		beego.Error(err)
 		return "", err
@@ -188,10 +190,10 @@ func create(ctx context.Context, resourceType, datacenter, namespace string, res
 	var dr dynamic.ResourceInterface
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		// namespaced resources should specify the namespace
-		dr = rc.DynamicRESTClient.Resource(mapping.Resource).Namespace(obj.GetNamespace())
+		dr = drc.DynamicRESTClient.Resource(mapping.Resource).Namespace(obj.GetNamespace())
 	} else {
 		// for cluster-wide resources
-		dr = rc.DynamicRESTClient.Resource(mapping.Resource)
+		dr = drc.DynamicRESTClient.Resource(mapping.Resource)
 	}
 
 	// 6. Marshal object into JSON
@@ -209,7 +211,41 @@ func create(ctx context.Context, resourceType, datacenter, namespace string, res
 		return "", err
 	}
 
-	beego.Info(fmt.Sprintf("created %s %q succeed", resourceType, result.GetName()))
+	beego.Info(fmt.Sprintf("created %s %q succeed", resourceKind, result.GetName()))
 	return result.GetName(), nil
 
+}
+
+func getGVR(resourceKind, datacenter string) (*pkg.DynamicRESTClient, *schema.GroupVersionKind, *schema.GroupVersionResource, error) {
+
+	var rk *schema.GroupVersionKind
+	rk.Kind = resourceKind
+	// check whether the datacenter is in the DynamicRESTClients
+	drc, ok := pkg.RESTClienter.DynamicRESTClients[datacenter]
+	if !ok {
+		return nil, nil, nil, ErrNotFoundDatacenter(datacenter)
+	}
+
+	// 1. Prepare a RESTMapper to find GVR
+	dc, err := discovery.NewDiscoveryClientForConfig(drc.KubeRESTConfig)
+	if err != nil {
+		beego.Error(err)
+		return drc, nil, nil, err
+	}
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+
+	// 2. Decode YAML manifest into unstructured.Unstructured
+	//obj := &unstructured.Unstructured{}
+	_, gvk, err := decUnstructured.Decode(nil, rk, nil)
+	if err != nil {
+		return drc, gvk, nil, err
+	}
+
+	// 4. Find GVR
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return drc, gvk, nil, err
+	}
+
+	return drc, gvk, &mapping.Resource, nil
 }
