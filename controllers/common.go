@@ -15,7 +15,7 @@ type ResourceController struct {
 	BaseController
 }
 
-type ReturnMsg struct {
+type MsgReturn struct {
 	EntryType string
 	Status    string
 	Msg       interface{}
@@ -35,7 +35,7 @@ func ErrNotFoundDatacenter(datacenter string) error {
 }
 
 func (b *BaseController) Json(entryType, status string, message, data interface{}) {
-	res := ReturnMsg{
+	res := MsgReturn{
 		EntryType: entryType,
 		Status:    status,
 		Msg:       message,

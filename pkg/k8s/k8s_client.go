@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"github.com/astaxie/beego/logs"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -20,15 +21,14 @@ type DynamicRESTClient struct {
 var (
 
 	// get kube config path
-	kubeConfigPath = beego.AppConfig.String("k8s::configpath")
+	kubeConfigPath = beego.AppConfig.String("k8s::configPath")
 
 	// get kube config with suffix
-	kubeConfigSuffix = beego.AppConfig.String("k8s::configsuffix")
+	kubeConfigSuffix = beego.AppConfig.String("k8s::configSuffix")
 
 	// get kube datacenter
 	datacenters = beego.AppConfig.Strings("k8s::datacenter")
 
-	// RESTClienter
 	RESTClienter *RESTClient
 
 	dynamicRESTClienter *DynamicRESTClient
@@ -52,18 +52,18 @@ func init() {
 	//var drc dynamicRESTClienter
 	var dynamicRESTClients = make(map[string]*DynamicRESTClient)
 	if len(datacenters) == 0 {
-		beego.BeeLogger.Warn("no datacenter was found")
+		logs.Warn("no datacenter was found")
 	} else {
 		for _, datacenter := range datacenters {
-			kubeconfigLocation := kubeConfigPath + "/" + datacenter + kubeConfigSuffix
-			kubeRESTConfig, dynamicClient, err := NewK8sClient(kubeconfigLocation)
+			kubeConfigLocation := kubeConfigPath + "/" + datacenter + kubeConfigSuffix
+			kubeRESTConfig, dynamicClient, err := NewK8sClient(kubeConfigLocation)
 			if err != nil {
-				beego.BeeLogger.Warn("cloud not load the %s kube config", datacenter)
+				logs.Warn("cloud not load the %s kube config", datacenter)
 			} else {
 				dynamicRESTClienter = NewDynamicRESTClient(kubeRESTConfig, dynamicClient)
 
 				dynamicRESTClients[datacenter] = dynamicRESTClienter
-				beego.BeeLogger.Info("Loading %s kube config succeed", datacenter)
+				logs.Info("Loading %s kube config succeed", datacenter)
 			}
 		}
 	}
@@ -71,11 +71,11 @@ func init() {
 }
 
 // NewK8sClient  return k8s client according to datacenter
-func NewK8sClient(kubeconfigLocation string) (*rest.Config, dynamic.Interface, error) {
+func NewK8sClient(kubeConfigLocation string) (*rest.Config, dynamic.Interface, error) {
 
-	// The kubeconfig configuration file is loaded natively,
+	// The kubeConfig configuration file is loaded natively,
 	// so the first parameter(masterURL) is an empty string
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigLocation)
+	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigLocation)
 	if err != nil {
 		return nil, nil, err
 	}

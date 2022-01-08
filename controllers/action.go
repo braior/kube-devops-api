@@ -3,8 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-
-	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 
 	pkg "github.com/braior/kube-devops-api/pkg/k8s"
 
@@ -88,28 +87,28 @@ func list(ctx context.Context, resourceKind, datacenter, namespace, label string
 		return nil, err
 	}
 
-	unstructObj, err := drc.DynamicRESTClient.
+	unStructObj, err := drc.DynamicRESTClient.
 		Resource(*gvr).
 		Namespace(namespace).
 		List(ctx, metav1.ListOptions{LabelSelector: label, Limit: 100})
 	if err != nil {
-		beego.Error(err)
+		logs.Error(err)
 		return nil, err
 	}
 
 	// Instantiate a deployment list data structure to receive the
-	// results converted from unstructurobj
+	// results converted from unStructurobj
 	switch gvk.Kind {
 	case "deployment":
 		deploymentList := &appsv1.DeploymentList{}
 
 		// convert
 		err = runtime.DefaultUnstructuredConverter.FromUnstructured(
-			unstructObj.UnstructuredContent(),
+			unStructObj.UnstructuredContent(),
 			deploymentList,
 		)
 		if err != nil {
-			beego.Error(err)
+			logs.Error(err)
 			return nil, err
 		}
 		return deploymentList, nil
@@ -131,7 +130,7 @@ func get(ctx context.Context, resourceKind, datacenter, namespace, name string) 
 		Namespace(namespace).
 		Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		beego.Error(err)
+		logs.Error(err)
 		return nil, err
 	}
 
@@ -147,7 +146,7 @@ func get(ctx context.Context, resourceKind, datacenter, namespace, name string) 
 			deployment,
 		)
 		if err != nil {
-			beego.Error(err)
+			logs.Error(err)
 			return nil, err
 		}
 		return deployment, nil
@@ -168,14 +167,14 @@ func create(ctx context.Context, resourceKind, datacenter, namespace string, res
 	// 1. Prepare a RESTMapper to find GVR
 	dc, err := discovery.NewDiscoveryClientForConfig(drc.KubeRESTConfig)
 	if err != nil {
-		beego.Error(err)
+		logs.Error(err)
 		return "", err
 	}
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
 
 	// 2. Decode YAML manifest into unstructured.Unstructured
 	obj := &unstructured.Unstructured{}
-	_, gvk, err := decUnstructured.Decode([]byte(resource), nil, obj)
+	_, gvk, err := decUnstructured.Decode(resource, nil, obj)
 	if err != nil {
 		return "", err
 	}
@@ -207,11 +206,11 @@ func create(ctx context.Context, resourceKind, datacenter, namespace string, res
 		FieldManager: "sample-controller",
 	})
 	if err != nil {
-		beego.Error(err)
+		logs.Error(err)
 		return "", err
 	}
 
-	beego.Info(fmt.Sprintf("created %s %q succeed", resourceKind, result.GetName()))
+	logs.Info(fmt.Sprintf("created %s %q succeed", resourceKind, result.GetName()))
 	return result.GetName(), nil
 
 }
@@ -229,7 +228,7 @@ func getGVR(resourceKind, datacenter string) (*pkg.DynamicRESTClient, *schema.Gr
 	// 1. Prepare a RESTMapper to find GVR
 	dc, err := discovery.NewDiscoveryClientForConfig(drc.KubeRESTConfig)
 	if err != nil {
-		beego.Error(err)
+		logs.Error(err)
 		return drc, nil, nil, err
 	}
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
